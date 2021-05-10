@@ -1,0 +1,78 @@
+- name: Criar usuario {{ user.username }}
+  become: true
+  ansible.builtin.user:
+    name: '{{ user.username }}'
+    state: present
+  loop: '{{ users }}'
+  loop_control: # https://docs.ansible.com/ansible/latest/user_guide/playbooks_loops.html#adding-controls-to-loops
+    loop_var: user
+    label: '{{ user.username }}'
+
+- name: Instalar dependencias
+  become: true
+  package:
+    name:
+      - git
+      - zsh
+    state: present
+
+#Me baseei no: https://github.com/gantsign/ansible-role-oh-my-zsh/blob/master/tasks/install.yml
+- name: clone oh-my-zsh para usuarios
+  tags:
+    # Suppress warning: [ANSIBLE0006] git used in place of git module
+    # O módulo Git não deixa a gente usar `core.autocrlf=input`.
+    - skip_ansible_lint
+  become: yes
+  #become_method: su
+  #become_user: '{{ user.username }}'
+  command: 'git clone -c core.autocrlf=input --depth=1 https://github.com/robbyrussell/oh-my-zsh.git .oh-my-zsh'
+  args:
+    chdir: '~{{ user.username }}'
+    creates: '~{{ user.username }}/.oh-my-zsh'
+  with_items: "{{ users }}"
+  when: "((user.oh_my_zsh | default({})).install | default(oh_my_zsh_install)) | bool"
+  loop_control:
+    loop_var: user
+    label: '{{ user.username }}'
+
+- name: permissoes do oh-my-zsh para usuarios
+  become: yes
+  file:
+    path: '~{{ user.username }}/.oh-my-zsh'
+    owner: '{{ user.username }}'
+    group: '{{ user.username }}'
+    mode: 'go-w'
+    recurse: yes
+  with_items: "{{ users }}"
+  when: "((user.oh_my_zsh | default({})).install | default(oh_my_zsh_install)) | bool"
+  loop_control:
+    loop_var: user
+    label: '{{ user.username }}'
+
+- name: definir o zsh como shell default
+  become: yes
+  user:
+    name: '{{ user.username }}'
+    shell: /bin/zsh
+  with_items: "{{ users }}"
+  when: "((user.oh_my_zsh | default({})).install | default(oh_my_zsh_install)) | bool"
+  loop_control:
+    loop_var: user
+    label: '{{ user.username }}'
+
+- name: escreve o .zshrc
+  become: yes
+  template:
+    src: zshrc.j2
+    dest: '~{{ user.username }}/.zshrc'
+    backup: yes
+    mode: 'u=rw,go=r'
+    owner: '{{ user.username }}'
+    group: '{{ user.username }}'
+  with_items: '{{ users }}'
+  when: "((user.oh_my_zsh | default({})).install | default(oh_my_zsh_install)) | bool"
+  loop_control:
+    loop_var: user
+    label: '{{ user.username }}'
+  vars:
+    ansible_ssh_pipelining: true

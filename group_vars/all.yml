@@ -1,0 +1,7 @@
+users:
+  - username: luigi
+    oh_my_zsh:
+      install: yes
+  - username: noinstall
+    oh_my_zsh:
+      install: no
