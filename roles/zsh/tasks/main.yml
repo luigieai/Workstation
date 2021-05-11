@@ -35,6 +35,17 @@
     loop_var: user
     label: '{{ user.username }}'
 
+- name: Clona o plugin autosuggestions
+  become: yes
+  ansible.builtin.git:
+    repo: https://github.com/zsh-users/zsh-autosuggestions
+    dest: ~{{ user.username }}/.oh-my-zsh/plugins/zsh-autosuggestions
+  with_items: "{{ users }}"
+  when: "((user.oh_my_zsh | default({})).install | default(oh_my_zsh_install)) | bool"
+  loop_control:
+    loop_var: user
+    label: '{{ user.username }}'
+
 - name: permissoes do oh-my-zsh para usuarios
   become: yes
   file:
