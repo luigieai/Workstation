@@ -1,3 +1,4 @@
+#TODO nem sempre a hosts pode ser all?
 - hosts: all
   roles:
     - role: zsh
